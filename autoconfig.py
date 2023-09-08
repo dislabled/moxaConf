@@ -30,22 +30,30 @@ class ConfigFile():
                 mac(str) MAC to add row
                 main(bool) Main or Reserve Mac to add
         """
+        print(file)
+        print(cabinet)
+        print(mac)
+        print(main)
 
         with open(file, 'r+') as f:
             csvobject = DictReader(f, delimiter=',', quotechar='"')
             csvlist = list(csvobject)
             for row in csvlist:
                 if row['Cabinet'] == cabinet:
+                    print('found in list')
                     if main:
                         row['MAC M'] = mac
                         print(row)
 
             f.seek(0)
-            data = DictWriter(f, delimiter=',', quotechar='"', fieldnames=csvobject.fieldnames)
+            data = DictWriter(f, delimiter=',',
+                              quotechar='"', fieldnames=csvobject.fieldnames)
             data.writeheader()
             data.writerows(csvlist)
 
 class AutoConfig():
+    """ Configures switch according to configfile and connected ports
+    """
     def __init__(self) -> None:
         pass
 
@@ -62,7 +70,7 @@ if __name__ == "__main__":
 
     test = ConfigFile()
     # configlist = test.read_config('config.test.csv')
-    test.write_config('site/config.test.csv', '1CBA10GH101', 'testmac', True)
+    test.write_config('site/config.test.csv', 'AP19', 'testmac', True)
     # configlist = read_config('config.csv')
     # for number, line in enumerate(configlist):
     #     print(f'{number}:  {line["Position"]}')

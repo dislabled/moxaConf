@@ -242,18 +242,18 @@ class Connection:
         """
         self.ser.write(b'configure\n')
         self.ser.read_until(self.cprompt)
-        for iface in alarm:
+        for count, iface in enumerate(alarm):
             self.ser.write(b'interface ethernet 1/'
-                + str(iface+1).encode('latin-1') + b'\n')
+                + str(count+1).encode('latin-1') + b'\n')
             self.ser.read_until(self.iprompt)
             if iface == 1:
-                self.vprint(f'conf_iface function: setting alarmstatus ON: {iface+1}')
+                self.vprint(f'conf_iface function: sett alarm on iface{count + 1} ON')
                 self.ser.write(b'relay-warning event link-off\n')
                 self.ser.read_until(self.iprompt)
                 self.ser.write(b'exit\n')
                 self.ser.read_until(self.cprompt)
             else:
-                self.vprint(f'conf_iface function: setting alarmstatus OFF: {iface+1}')
+                self.vprint(f'conf_iface function: set alarm on iface{count + 1} OFF')
                 self.ser.write(b'no relay-warning event link\n')
                 self.ser.read_until(self.iprompt)
                 self.ser.write(b'exit\n')

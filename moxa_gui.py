@@ -8,8 +8,8 @@ from tkinter import messagebox as mb
 from tkinter import filedialog as fd
 from tkinter import ttk
 from threading import Thread
-# from moxalib import Connection
-from testlib import Connection
+from moxalib import Connection
+# from testlib import Connection
 from autoconfig import ConfigFile
 
 moxa_switch = Connection(verbose=True)
@@ -33,7 +33,6 @@ class MoxaGUI(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
         self.wm_title('Moxa Configurator')
         self.resizable(False, False)
-        # self.attributes('-alpha',0.8)
         self.bind("<Escape>", lambda _: self.destroy())
         # self.bind("<Escape>", lambda _: self.show_frame(MainPage))
         container = tk.Frame(self)
@@ -305,9 +304,9 @@ class AutoConf(tk.Frame):
         self.frame0.grid(row=0, column=0, sticky='n')
         self.frame1 = tk.Frame(self) # Treeview
         self.frame1.grid(row=1, column=0, sticky='nsew')
-        self.frame2 = tk.Frame(self) #
+        self.frame2 = tk.Frame(self) # Statusline
         self.frame2.grid(row=2, column=0, sticky='nsew')
-
+        # Treeview
         self.columns = ('cab', 'sw_ip', 'loc')
         self.tree = ttk.Treeview(self.frame1, columns=self.columns,
                                  show='headings', height=30)
@@ -322,19 +321,16 @@ class AutoConf(tk.Frame):
             command=self.tree.yview)
         self.scrollbar.pack(fill=tk.BOTH, expand=True, side="right")
         self.tree.pack(fill=tk.BOTH, expand=1)
-
+        # Buttons
         self.swconf = tk.IntVar(value=0)
         self.swmainred = tk.IntVar(value=0)
-
-# Buttons
-        self.done_button = tk.Button(self.frame0, text="Configured",
+        self.done_button = tk.Button(self.frame0, text="all switches",
             width=10, command=self.bswitch)
         self.done_button.pack(side='left')
         self.main_button = tk.Radiobutton(self.frame0, text="Main",
             variable=self.swmainred, indicatoron=False,
             value=0, width=8, command=self.refresh)
         self.main_button.pack(side='left')
-
         self.red_button = tk.Radiobutton(self.frame0, text="Red",
             variable=self.swmainred, indicatoron=False,
             value=1, width=8, command=self.refresh)
@@ -346,14 +342,32 @@ class AutoConf(tk.Frame):
 
     def item_selected(self, event) -> None:
         _ = event   # Hush some editor warnings
-        print(self.tree.item(self.tree.focus())['values'])
+        config = self.tree.item(self.tree.focus())['values']
+        if self.swmainred.get() == 1:
+            main_reserve = 'M'
+        else:
+            main_reserve = 'R'
+        moxa_switch.conf_hostname(config[0] + main_reserve)
+        moxa_switch.conf_location(config[2])
+        moxa_switch.conf_ip(config[1])
+        ports = [0,0,0,0,0,0,0,0]
+        for count, port in enumerate(moxa_switch.get_ifaces()):
+            if port == 'Up':
+                ports[count] = 1
+        moxa_switch.conf_iface(ports)
+        self.config_file.write_config('site/config.test.csv', config[0],
+                                moxa_switch.get_sysinfo()[4],
+                                True if self.swmainred.get() ==  1 else False )
+        self.refresh()
 
     def bswitch(self) -> None:
         """ On/Off switch
         """
         if self.swconf.get() == 0:
+            self.done_button.configure(text='unconfigured')
             self.swconf.set(1)
         else:
+            self.done_button.configure(text='all switches')
             self.swconf.set(0)
         self.refresh()
 
@@ -362,7 +376,7 @@ class AutoConf(tk.Frame):
         """
         for entry in self.tree.get_children():
             self.tree.delete(entry)
-        lollist = self.read_config('site/config.csv')
+        lollist = self.read_config('site/config.test.csv')
         for entry in lollist:
             self.tree.insert('', tk.END, values=list(entry))
         # Statusline
@@ -384,25 +398,25 @@ class AutoConf(tk.Frame):
             if row['SW'] == '1':
                 # Not configured
                 if self.swconf.get() == 0:
-                    # Only Main
+                    # Only Reserve
                     if self.swmainred.get() == 1:
                         if row['DIPR'] != "":
                             config.append((row['Cabinet'], row['Switch IP address'],
                                            row['Position']))
-                    # Only Reserve
+                    # Only Main
                     else:
                         config.append((row['Cabinet'], row['Switch IP address'],
                                        row['Position']))
                 # Configured
                 else:
-                    # Only Main
+                    # Only Reserve
                     if self.swmainred.get() == 1:
-                        if row['DIPR'] != "" and row['MAC M'] == "":
+                        if row['DIPR'] != "" and row['MAC R'] == "":
                             config.append((row['Cabinet'], row['Switch IP address'],
                                            row['Position']))
-                    # Only Reserve
+                    # Only Main
                     else:
-                        if  row['MAC R'] == "":
+                        if  row['MAC M'] == "":
                             config.append((row['Cabinet'], row['Switch IP address'],
                                            row['Position']))
         return config
@@ -413,7 +427,6 @@ class LogView(tk.Frame):
     """
     def __init__(self, parent, controller) -> None:
         tk.Frame.__init__(self, parent)
-        # self.geometry('600x1200')
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
         # Frame 0 BUTTONS:
