@@ -3,9 +3,10 @@
 
 import tkinter as tk
 import os
+import sys
 from tkinter import messagebox as mb
 from tkinter import filedialog as fd
-from tkinter import ttk as ttk
+from tkinter import ttk
 from threading import Thread
 # from moxalib import Connection
 from testlib import Connection
@@ -58,6 +59,8 @@ class MoxaGUI(tk.Tk):
         self.show_frame(MainPage)
 
     def show_frame(self, cont):
+        """ Method to raise frames
+        """
         self.config(cursor='watch')
         frame = self.frames[cont]
         # frame.update()
@@ -205,7 +208,7 @@ class MainPage(tk.Frame):
         self.config(cursor='watch')
         if mb.askokcancel(title='Warning', message='Do you wish to proceed?'):
             moxa_switch.factory_conf()
-            quit(0)
+            sys.exit(0)
 
     def download_config(self):
         """ Download the switch running config
@@ -325,16 +328,20 @@ class AutoConf(tk.Frame):
 
 # Buttons
         self.done_button = tk.Button(self.frame0, text="Configured",
-            width=10, command=self.bswitch).pack(side='left')
+            width=10, command=self.bswitch)
+        self.done_button.pack(side='left')
         self.main_button = tk.Radiobutton(self.frame0, text="Main",
             variable=self.swmainred, indicatoron=False,
-            value=0, width=8, command=self.refresh).pack(side='left')
+            value=0, width=8, command=self.refresh)
+        self.main_button.pack(side='left')
 
         self.red_button = tk.Radiobutton(self.frame0, text="Red",
             variable=self.swmainred, indicatoron=False,
-            value=1, width=8, command=self.refresh).pack(side='left')
+            value=1, width=8, command=self.refresh)
+        self.red_button.pack(side='left')
         self.return_button = tk.Button(self.frame0, text="Return", width=10,
-            command=lambda: controller.show_frame(MainPage)).pack(side='left')
+            command=lambda: controller.show_frame(MainPage))
+        self.return_button.pack(side='left')
         self.refresh()
 
     def item_selected(self, event) -> None:
@@ -494,16 +501,16 @@ class Firmware(tk.Frame):
                 thread.start()
                 return thread
 
-            tr = transfer()
-            while tr.is_alive():
+            transfer_func = transfer()
+            while transfer_func.is_alive():
                 self.value_label.config(text=self.update_progress_label())
                 self.progressbar.config(
                     value=round(100 * blocks * moxa_switch.success_count / filesize)
                 )
 
-            if tr:
+            if transfer_func:
                 mb.showinfo(title='Success', message= 'Success, switch is rebooting')
-                quit(0)
+                sys.exit(0)
             else:
                 mb.showerror(title='Error', message='Something went wrong')
 
