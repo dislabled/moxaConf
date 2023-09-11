@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # coding=utf-8
-
+"""
+A GUI configurator for Moxa EDS switches
+"""
 import tkinter as tk
 import os
 import sys
@@ -8,9 +10,9 @@ from tkinter import messagebox as mb
 from tkinter import filedialog as fd
 from tkinter import ttk
 from threading import Thread
-from moxalib import Connection
-# from testlib import Connection
-from autoconfig import ConfigFile
+from moxa_ser_lib import Connection, sleep
+# from moxa_ser_test import Connection
+from moxa_csv_lib import ConfigFile
 
 moxa_switch = Connection(verbose=True)
 
@@ -42,6 +44,8 @@ class MoxaGUI(tk.Tk):
             logincheck = moxa_switch.check_login()
             if logincheck == 0:
                 moxa_switch.menu_login()
+                moxa_switch.reset_conn()
+                sleep(2)
                 moxa_switch.cli_login()
             elif logincheck == 1:
                 moxa_switch.cli_login()
@@ -175,7 +179,6 @@ class MainPage(tk.Frame):
         templist = []
         for port in self.alobjports:
             templist.append(port.get())
-        print(templist)
         moxa_switch.conf_iface(templist)
         self.refresh()
 
@@ -280,7 +283,6 @@ class MainPage(tk.Frame):
         self.swswv.config(bg='#D9D9D9', relief=tk.FLAT, state=tk.DISABLED)
         self.swip.insert(tk.END, self.mgmt_ip[2])
         self.pcol = self.portcolor()
-        print(self.pcol)
         self.port_1.config(background=self.pcol[0])
         self.port_2.config(background=self.pcol[1])
         self.port_3.config(background=self.pcol[2])
@@ -298,6 +300,7 @@ class AutoConf(tk.Frame):
     def __init__(self, parent, controller) -> None:
         tk.Frame.__init__(self, parent)
         self.config_file = ConfigFile()
+        self.file = ''
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
         self.frame0 = tk.Frame(self) # Buttons
@@ -338,27 +341,33 @@ class AutoConf(tk.Frame):
         self.return_button = tk.Button(self.frame0, text="Return", width=10,
             command=lambda: controller.show_frame(MainPage))
         self.return_button.pack(side='left')
-        self.refresh()
 
     def item_selected(self, event) -> None:
+        """ get selected value and write config to switch
+        """
         _ = event   # Hush some editor warnings
         config = self.tree.item(self.tree.focus())['values']
-        if self.swmainred.get() == 1:
-            main_reserve = 'M'
-        else:
-            main_reserve = 'R'
-        moxa_switch.conf_hostname(config[0] + main_reserve)
-        moxa_switch.conf_location(config[2])
-        moxa_switch.conf_ip(config[1])
         ports = [0,0,0,0,0,0,0,0]
         for count, port in enumerate(moxa_switch.get_ifaces()):
             if port == 'Up':
                 ports[count] = 1
-        moxa_switch.conf_iface(ports)
-        self.config_file.write_config('site/config.test.csv', config[0],
-                                moxa_switch.get_sysinfo()[4],
-                                True if self.swmainred.get() ==  1 else False )
-        self.refresh()
+        if self.swmainred.get() == 0:
+            main_reserve = 'M'
+        else:
+            main_reserve = 'R'
+        message = (f'Hostname: {config[0] + main_reserve}\n'
+                     f'Location: {config[2]}\n'
+                     f'IP Address: {config[1]}\n'
+                     f'Alarm on {ports}')
+        if mb.askokcancel(title='Continue?', message=message):
+            moxa_switch.conf_hostname(config[0] + main_reserve)
+            moxa_switch.conf_location(config[2])
+            moxa_switch.conf_ip(config[1])
+            moxa_switch.conf_iface(ports)
+            self.config_file.write_config(self.file, config[0],
+                                    moxa_switch.get_sysinfo()[4],
+                                    True if self.swmainred.get() ==  0 else False )
+            self.refresh()
 
     def bswitch(self) -> None:
         """ On/Off switch
@@ -374,10 +383,15 @@ class AutoConf(tk.Frame):
     def refresh(self) -> None:
         """ Refresh the values in the frame
         """
+        if self.file == '':
+            file = fd.askopenfilename()
+            if file != '':
+                self.file = file
+
         for entry in self.tree.get_children():
             self.tree.delete(entry)
-        lollist = self.read_config('site/config.test.csv')
-        for entry in lollist:
+        csvlist = self.read_config(self.file)
+        for entry in csvlist:
             self.tree.insert('', tk.END, values=list(entry))
         # Statusline
         total_count = len(self.tree.get_children())
@@ -398,25 +412,25 @@ class AutoConf(tk.Frame):
             if row['SW'] == '1':
                 # Not configured
                 if self.swconf.get() == 0:
-                    # Only Reserve
-                    if self.swmainred.get() == 1:
-                        if row['DIPR'] != "":
-                            config.append((row['Cabinet'], row['Switch IP address'],
-                                           row['Position']))
                     # Only Main
-                    else:
+                    if self.swmainred.get() == 0:
                         config.append((row['Cabinet'], row['Switch IP address'],
                                        row['Position']))
-                # Configured
-                else:
                     # Only Reserve
-                    if self.swmainred.get() == 1:
-                        if row['DIPR'] != "" and row['MAC R'] == "":
+                    else:
+                        if row['DIPB'] != "":
                             config.append((row['Cabinet'], row['Switch IP address'],
                                            row['Position']))
+                # Configured
+                else:
                     # Only Main
+                    if self.swmainred.get() == 0:
+                        if row['DIPB'] != "" and row['MAC M'] == "":
+                            config.append((row['Cabinet'], row['Switch IP address'],
+                                           row['Position']))
+                    # Only Reserve
                     else:
-                        if  row['MAC M'] == "":
+                        if row['DIPR'] != "" and row['MAC R'] == "":
                             config.append((row['Cabinet'], row['Switch IP address'],
                                            row['Position']))
         return config
@@ -441,7 +455,6 @@ class LogView(tk.Frame):
         self.frame1.grid(row=1, column=0, sticky='nsew')
         self.scrollbar = ttk.Scrollbar(self.frame1, orient=tk.VERTICAL)
         self.logtext = tk.Text(self.frame1)
-        # self.refresh()
 
     def clearlog(self) -> None:
         """ Clear the Eventlog

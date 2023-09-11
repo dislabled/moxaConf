@@ -18,10 +18,12 @@ def expect(buffer:list, wtf:list) -> int:
     """ find a string in read value
 
     Args:
+        buffer (list): the text to be searched
         wtf (str): what to find
 
     Returns:
-        int: -1 if nothing found, stringindex for match,
+        int: stringindex for match,
+             -1 if nothing found, 
              -2 if empty buffer
     """
     findval = buffer[-1]
@@ -91,34 +93,41 @@ class Connection:
             password (str): password, default ''
         """
         self.vprint('Entering Ansi terminal...')
-        self.ser.write(b'\r')  # Press enter to use ansi terminal
-        # account_mode = self.expect([br'\[admin\]'])
-        # # account_mode = self.ser.expect([br'\[admin\]'], timeout=5)
-        # if account_mode == 0:
-        #     # self.vprint('Selecting Account name: {}'.format(user))
-        #     # test = self.ser.read_some()
-        #     # self.vprint(test.decode('latin-1'))
-        #     self.ser.write(b'\x1b[B') # Enter username
-        # else:
-        self.vprint(f'menu_login function: Writing Account name: {user}')
-        sleep(2)
-        self.ser.write(user.encode('latin-1') + '\n'.encode('latin-1')) # Enter username
+        # Press enter to use ansi terminal
+        self.ser.write(b'\r')
+        account_mode = expect(self.ser.readlines(), [br'[admin]'])
+        if account_mode == 0:
+            self.vprint('Selecting Account name: {}'.format(user))
+            # Select username
+            self.ser.write(b'\x1b[B')
+        else:
+            self.vprint(f'menu_login function: Writing Account name: {user}')
+            sleep(2)
+            # Enter Username
+            self.ser.write(user.encode('latin-1') + '\n'.encode('latin-1'))
         self.vprint(f'menu_login function: Writing Password: {password}')
+        # Enter password
         self.ser.write(password.encode('latin-1')
-            + '\n'.encode('latin-1'))  # Enter password
+            + '\n'.encode('latin-1'))
         sleep(0.2)
-        self.ser.write(b'\n')                             # Clear weak password popup
-        sleep(0.2)
+        weak_password_prompt = expect(self.ser.readlines(), [br'Enter to select'])
+        print(weak_password_prompt)
+        if weak_password_prompt == -1:
+            # Clear weak password popup (on newer firmware)
+            self.ser.write(b'\n')
+            sleep(0.2)
         self.vprint('menu_login function: Entering "Basic" menu...')
-        self.ser.write(b'1\n')                            # Enter menu - Basic
+        # Enter menu - Basic
+        self.ser.write(b'1\n')
         sleep(0.2)
         self.vprint('menu_login function: Entering "Login mode" menu...')
-        self.ser.write(b'l\n')                            # Enter menu login mode
+        # Enter menu login mode
+        self.ser.write(b'l\n')
         sleep(0.2)
         self.vprint('menu_login function: Entering "yes" to switch mode...')
-        self.ser.write(b'Y\n')                            # Enter yes to switch to CLI
+        # Enter yes to switch to CLI
+        self.ser.write(b'Y\n')
         self.vprint('menu_login function: Restarting Connection')
-        self.ser.close()
 
     def cli_login(self, user:str='admin', password:str='') -> None:
         """ Login with cli login
@@ -128,33 +137,31 @@ class Connection:
             password (str): password, default ''
         """
         self.vprint(f'cli_login function: Writing Account name: {user}')
-        self.ser.write(user.encode('latin-1') + b'\n')      # Enter username
+        # Enter username
+        self.ser.write(user.encode('latin-1') + b'\n')
         self.vprint(f'cli_login function: Writing Password: {password}')
-        self.ser.write(password.encode('latin-1') + b'\n')  # Enter password
+        # Enter password
+        self.ser.write(password.encode('latin-1') + b'\n')
+        # Clear potential weak password popup (on newer firmware)
         self.ser.write('\n'.encode('latin-1'))
-        # after_pw = self.expect([self.prompt])
-        # if after_pw != -1:
-        #     # Confirm popu for weak password
-        #     # Only on newer firmware
-        #     self.ser.write('\n'.encode('latin-1'))
-        #     sleep(0.1)
-        #     self.vprint(self.ser.read_until(self.prompt).decode('latin-1'))
-        self.ser.write(b'terminal length 0\n')            # Change to unlimited length
-        self.ser.readlines()[-1].decode('latin-1')        # Clear buffer
+        # Change terminal length to unlimited to dismiss pager
+        self.ser.write(b'terminal length 0\n')
+        # Clear buffer
+        self.ser.readlines()[-1].decode('latin-1')
 
 
-    def keepalive(self) -> int:
+    def keepalive(self) -> bool:
         """ Keeps user logged in
 
         Returns:
-            int: -1: OK
-                  0: Error
+            bool: True: OK
+                  False: Error
         """
         self.ser.write(b'\n')
         if self.ser.readlines()[-1].rstrip() != self.prompt:
-            return 0
+            return False
         self.vprint('keepalive function')
-        return -1
+        return True
 
     def get_sysinfo(self) -> list:
         """ Gets system info and returns it as a list
@@ -247,7 +254,7 @@ class Connection:
                 + str(count+1).encode('latin-1') + b'\n')
             self.ser.read_until(self.iprompt)
             if iface == 1:
-                self.vprint(f'conf_iface function: sett alarm on iface{count + 1} ON')
+                self.vprint(f'conf_iface function: set alarm on iface{count + 1} ON')
                 self.ser.write(b'relay-warning event link-off\n')
                 self.ser.read_until(self.iprompt)
                 self.ser.write(b'exit\n')
@@ -285,7 +292,7 @@ class Connection:
         self.ser.write(b'exit\n')
         self.ser.write(b'exit\n')
         self.ser.read_until(self.prompt)
-        if self.get_ip()[2] != ip_add:
+        if self.get_ip()[2] != ip_add.encode('latin-1'):
             self.vprint(f'conf_ip function: set: {ip_add}')
             return 0
         self.vprint('conf_ip function: Failure')
@@ -436,11 +443,6 @@ if __name__ == "__main__":
         moxa_switch.get_ifaces()
         moxa_switch.get_portconfig()
         moxa_switch.get_ip()
-        # alarms = [1,0,0,1,0,1,1,0]
-        # moxa_switch.conf_iface(alarms)
-        # print(moxa_switch.get_eventlog())
-        # moxa_switch.factory_conf()
-        # print(moxa_switch.conf_ip('192.168.127.252'))
-        input()
+        input('press any key to quit')
     else:
         print('Cannot log in: ', + logincheck)
