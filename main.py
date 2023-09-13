@@ -35,8 +35,8 @@ class MoxaGUI(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
         self.wm_title('Moxa Configurator')
         self.resizable(False, False)
-        self.bind("<Escape>", lambda _: self.destroy())
-        # self.bind("<Escape>", lambda _: self.show_frame(MainPage))
+        # self.bind("<Escape>", lambda _: self.destroy())
+        self.bind("<Escape>", lambda _: self.show_frame(MainPage))
         container = tk.Frame(self)
         container.pack(side='top', fill='both', expand=True)
 
@@ -215,8 +215,11 @@ class MainPage(tk.Frame):
     def download_config(self):
         """ Download the switch running config
         """
-        filename = fd.asksaveasfilename(defaultextension='.ini')
-        if filename != '':
+        initial_file = moxa_switch.get_sysinfo()[0]
+        filename = fd.asksaveasfilename(defaultextension='.ini',
+                                        initialdir='./site/configs/',
+                                        initialfile=initial_file)
+        if filename != ():
             contents = moxa_switch.save_config()
             with open(filename, "w") as config:
                 config.write(contents)
@@ -364,6 +367,7 @@ class AutoConf(tk.Frame):
             moxa_switch.conf_location(config[2])
             moxa_switch.conf_ip(config[1])
             moxa_switch.conf_iface(ports)
+            moxa_switch.save_run2startup()
             self.config_file.write_config(self.file, config[0],
                                     moxa_switch.get_sysinfo()[4],
                                     True if self.swmainred.get() ==  0 else False )
