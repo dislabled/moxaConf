@@ -11,8 +11,8 @@ Todo:
 import re
 from time import sleep
 from ipaddress import ip_address
-from serial import Serial
-from xmodem import XMODEM, NAK
+from serial import Serial # type: ignore
+from xmodem import XMODEM, NAK # type: ignore
 
 def expect(buffer:list, wtf:list) -> int:
     """ find a string in read value
@@ -111,7 +111,6 @@ class Connection:
             + '\n'.encode('latin-1'))
         sleep(0.2)
         weak_password_prompt = expect(self.ser.readlines(), [br'Enter to select'])
-        print(weak_password_prompt)
         if weak_password_prompt == -1:
             # Clear weak password popup (on newer firmware)
             self.ser.write(b'\n')
