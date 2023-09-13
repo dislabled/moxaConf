@@ -14,7 +14,7 @@ from moxa_ser_lib import Connection, sleep
 # from moxa_ser_test import Connection
 from moxa_csv_lib import ConfigFile
 
-moxa_switch = Connection(verbose=True)
+moxa_switch = Connection()
 
 def threaded(func):
     """
@@ -388,7 +388,8 @@ class AutoConf(tk.Frame):
         """ Refresh the values in the frame
         """
         if self.file == '':
-            file = fd.askopenfilename()
+            file = fd.askopenfilename(initialdir='./site/',
+                                      filetypes=[('Comma Seperated files', '.csv')])
             if file != '':
                 self.file = file
 
