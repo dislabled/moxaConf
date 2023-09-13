@@ -518,8 +518,9 @@ class Firmware(tk.Frame):
     def get_file(self) -> None:
         """ Transfer Firmware with XMODEM
         """
-        filename = fd.askopenfilename()
-        if filename != '':
+        filename = fd.askopenfilename(initialdir='./site/',
+                                      filetypes=[('Rom files', '.rom')])
+        if filename != ():
             blocks = 128
             filesize = os.path.getsize(filename)
 
