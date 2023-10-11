@@ -6,15 +6,16 @@ A GUI configurator for Moxa EDS switches
 import tkinter as tk
 import os
 import sys
+from time import sleep
 from tkinter import messagebox as mb
 from tkinter import filedialog as fd
 from tkinter import ttk
 from threading import Thread
-from moxa_ser_lib import Connection, sleep
-# from moxa_ser_test import Connection
+# from moxa_ser_lib import Connection
+from moxa_ser_test import Connection
 from moxa_csv_lib import ConfigFile
 
-moxa_switch = Connection()
+moxa_switch = Connection(verbose=True)
 
 def threaded(func):
     """
@@ -313,13 +314,15 @@ class AutoConf(tk.Frame):
         self.frame2 = tk.Frame(self) # Statusline
         self.frame2.grid(row=2, column=0, sticky='nsew')
         # Treeview
-        self.columns = ('cab', 'sw_ip', 'loc')
+        self.columns = ('cab','ap', 'sw_ip', 'loc')
         self.tree = ttk.Treeview(self.frame1, columns=self.columns,
                                  show='headings', height=30)
-        self.tree.column('cab', width=150, anchor=tk.NW)
-        self.tree.column('sw_ip', width=150, anchor=tk.NW)
+        self.tree.column('cab', width=130, anchor=tk.NW)
+        self.tree.column('ap', width=60, anchor=tk.NW)
+        self.tree.column('sw_ip', width=140, anchor=tk.NW)
         self.tree.column('loc', width=350, anchor=tk.NW)
         self.tree.heading('cab', text='Cabinet')
+        self.tree.heading('ap', text='AP')
         self.tree.heading('sw_ip', text='Switch IP')
         self.tree.heading('loc', text='Location')
         self.tree.bind('<Double-1>', self.item_selected)
@@ -359,16 +362,16 @@ class AutoConf(tk.Frame):
         else:
             main_reserve = 'R'
         message = (f'Hostname: {config[0] + main_reserve}\n'
-                     f'Location: {config[2]}\n'
-                     f'IP Address: {config[1]}\n'
+                     f'Location: {config[3]}\n'
+                     f'IP Address: {config[2]}\n'
                      f'Alarm on {ports}')
         if mb.askokcancel(title='Continue?', message=message):
             moxa_switch.conf_hostname(config[0] + main_reserve)
-            moxa_switch.conf_location(config[2])
-            moxa_switch.conf_ip(config[1])
+            moxa_switch.conf_location(config[3])
+            moxa_switch.conf_ip(config[2])
             moxa_switch.conf_iface(ports)
             moxa_switch.save_run2startup()
-            self.config_file.write_config(self.file, config[0],
+            self.config_file.write_config(self.file, config[0], config[1],
                                     moxa_switch.get_sysinfo()[4],
                                     True if self.swmainred.get() ==  0 else False )
             self.refresh()
@@ -419,25 +422,25 @@ class AutoConf(tk.Frame):
                 if self.swconf.get() == 0:
                     # Only Main
                     if self.swmainred.get() == 0:
-                        config.append((row['Cabinet'], row['Switch IP address'],
-                                       row['Position']))
+                        config.append((row['Cabinet'], row['AP'],
+                                       row['Switch IP address'], row['Position']))
                     # Only Reserve
                     else:
                         if row['DIPB'] != "":
-                            config.append((row['Cabinet'], row['Switch IP address'],
-                                           row['Position']))
+                            config.append((row['Cabinet'], row['AP'],
+                                           row['Switch IP address'], row['Position']))
                 # Configured
                 else:
                     # Only Main
                     if self.swmainred.get() == 0:
                         if row['DIPB'] != "" and row['MAC M'] == "":
-                            config.append((row['Cabinet'], row['Switch IP address'],
-                                           row['Position']))
+                            config.append((row['Cabinet'], row['AP'],
+                                           row['Switch IP address'], row['Position']))
                     # Only Reserve
                     else:
                         if row['DIPR'] != "" and row['MAC R'] == "":
-                            config.append((row['Cabinet'], row['Switch IP address'],
-                                           row['Position']))
+                            config.append((row['Cabinet'], row['AP'],
+                                           row['Switch IP address'], row['Position']))
         return config
 
 
@@ -477,7 +480,7 @@ class LogView(tk.Frame):
         self.logtext.config(state=tk.NORMAL)
         self.logtext.delete(1.0, tk.END)
         self.logtext.insert(tk.END, moxa_switch.get_eventlog())
-        self.logtext.grid() #, padx=5, pady=1)
+        self.logtext.grid()
         self.logtext.config(state=tk.DISABLED)
         self.config(cursor='')
 
