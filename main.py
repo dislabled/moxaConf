@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # coding=utf-8
-"""
-A GUI configurator for Moxa EDS switches
-"""
+"""GUI configurator for Moxa EDS switches."""
 import tkinter as tk
 import os
 import sys
@@ -12,8 +10,9 @@ from tkinter import filedialog as fd
 from tkinter import ttk
 from threading import Thread
 
-# from moxa_ser_lib import Connection
-from moxa_ser_test import Connection
+from moxa_ser_lib import Connection
+
+# from moxa_ser_test import Connection
 from moxa_csv_lib import ConfigFile
 
 moxa_switch = Connection(verbose=True)
@@ -21,6 +20,8 @@ moxa_switch = Connection(verbose=True)
 
 def threaded(func):
     """
+    Decorate functions.
+
     Decorator that multithreads the target function
     with the given parameters. Returns the thread
     created for the function
@@ -35,9 +36,10 @@ def threaded(func):
 
 
 class MoxaGUI(tk.Tk):
-    """Root window for moxa configurator"""
+    """Root window for moxa configurator."""
 
     def __init__(self, *args, **kwargs) -> None:
+        """Initialize the class."""
         tk.Tk.__init__(self, *args, **kwargs)
         self.wm_title("Moxa Configurator")
         self.resizable(False, False)
@@ -69,7 +71,7 @@ class MoxaGUI(tk.Tk):
         self.show_frame(MainPage)
 
     def show_frame(self, cont):
-        """Method to raise frames"""
+        """Raise frames."""
         self.config(cursor="watch")
         frame = self.frames[cont]
         # frame.update()
@@ -79,9 +81,10 @@ class MoxaGUI(tk.Tk):
 
 
 class MainPage(tk.Frame):
-    """Main Frame"""
+    """Main Frame."""
 
     def __init__(self, parent, controller):
+        """Initialize the class."""
         tk.Frame.__init__(self, parent)
         self.frame0 = tk.Frame(self)  # Hostname etc
         self.frame0.grid(row=0, column=0, sticky="nw")
@@ -236,7 +239,7 @@ class MainPage(tk.Frame):
         button6.grid(row=1, column=2)
 
     def p_refresh(self):
-        """Refresh port values"""
+        """Refresh port values."""
         self.config(cursor="watch")
         templist = []
         for port in self.alobjports:
@@ -245,7 +248,7 @@ class MainPage(tk.Frame):
         self.refresh()
 
     def portcolor(self) -> list:
-        """Set background colors of connected ports"""
+        """Set background colors of connected ports."""
         pcol = ["", "", "", "", "", "", "", "", ""]
         for count, port in enumerate(self.stintports):
             if port == "Up":
@@ -255,7 +258,7 @@ class MainPage(tk.Frame):
         return pcol
 
     def portalarms(self) -> list:
-        """Set status of alarms on ports"""
+        """Set status of alarms on ports."""
         p_al = []  # type: list[int]
         for count, port in enumerate(self.stintports):
             if port == "Off":
@@ -265,14 +268,14 @@ class MainPage(tk.Frame):
         return p_al
 
     def factory_reset(self):
-        """Factory reset the switch"""
+        """Reset switch to factory settings."""
         self.config(cursor="watch")
         if mb.askokcancel(title="Warning", message="Do you wish to proceed?"):
             moxa_switch.factory_conf()
             sys.exit(0)
 
     def download_config(self):
-        """Download the switch running config"""
+        """Download the switch running config."""
         initial_file = moxa_switch.get_sysinfo()[0]
         filename = fd.asksaveasfilename(
             defaultextension=".ini",
@@ -285,26 +288,26 @@ class MainPage(tk.Frame):
                 config.write(contents)
 
     def apply(self):
-        """Save the running config to startup config"""
+        """Save the running config to startup config."""
         if moxa_switch.save_run2startup():
             mb.showinfo(message="Success")
         else:
             mb.showerror(title="Error", message="Something went wrong")
 
     def upd_name(self):
-        """Write the new hostname"""
+        """Write the new hostname."""
         moxa_switch.conf_hostname(self.swname.get())
 
     def upd_loc(self):
-        """Write the new location"""
+        """Write the new location."""
         moxa_switch.conf_location(self.swloc.get())
 
     def upd_ip(self):
-        """Write the new IP address"""
+        """Write the new IP address."""
         moxa_switch.conf_ip(self.swip.get())
 
     def refresh(self) -> None:
-        """Read and refresh values on screen"""
+        """Read and refresh values on screen."""
         # Read new values
         self.system = moxa_switch.get_sysinfo()
         self.version = moxa_switch.get_version()
@@ -353,9 +356,10 @@ class MainPage(tk.Frame):
 
 
 class AutoConf(tk.Frame):
-    """Devicewindow GUI for moxa configurator"""
+    """Devicewindow GUI for moxa configurator."""
 
     def __init__(self, parent, controller) -> None:
+        """Initialize the class."""
         tk.Frame.__init__(self, parent)
         self.config_file = ConfigFile()
         self.file = ""
@@ -422,7 +426,7 @@ class AutoConf(tk.Frame):
         self.return_button.pack(side="left")
 
     def item_selected(self, event) -> None:
-        """get selected value and write config to switch"""
+        """Get selected value and write config to switch."""
         _ = event  # Hush some editor warnings
         config = self.tree.item(self.tree.focus())["values"]
         ports = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -455,7 +459,7 @@ class AutoConf(tk.Frame):
             self.refresh()
 
     def bswitch(self) -> None:
-        """On/Off switch"""
+        """Toggle switch On/Off."""
         if self.swconf.get() == 0:
             self.done_button.configure(text="unconfigured")
             self.swconf.set(1)
@@ -465,10 +469,10 @@ class AutoConf(tk.Frame):
         self.refresh()
 
     def refresh(self) -> None:
-        """Refresh the values in the frame"""
+        """Refresh the values in the frame."""
         if self.file == "":
             file = fd.askopenfilename(
-                initialdir="./site/", filetypes=[("Comma Seperated files", ".csv")]
+                initialdir="./site/", filetypes=[("Comma Separated files", ".csv")]
             )
             if file != "":
                 self.file = file
@@ -484,7 +488,8 @@ class AutoConf(tk.Frame):
         label.grid(row=0, column=0)
 
     def read_config(self, file: str) -> list:
-        """Read and parse CSV file according to buttons
+        """
+        Read and parse CSV file according to buttons.
 
         input:
             csvfile (str)
@@ -546,9 +551,10 @@ class AutoConf(tk.Frame):
 
 
 class LogView(tk.Frame):
-    """Logviewer GUI for moxa configurator"""
+    """Logviewer GUI for moxa configurator."""
 
     def __init__(self, parent, controller) -> None:
+        """Initialize the class."""
         tk.Frame.__init__(self, parent)
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
@@ -571,13 +577,13 @@ class LogView(tk.Frame):
         self.logtext = tk.Text(self.frame1)
 
     def clearlog(self) -> None:
-        """Clear the Eventlog"""
+        """Clear the Eventlog."""
         self.config(cursor="watch")
         moxa_switch.clear_eventlog()
         self.refresh()
 
     def refresh(self) -> None:
-        """Refresh the values in the frame"""
+        """Refresh the values in the frame."""
         self.clr_button.pack(side="left")
         self.return_button.pack(side="left")
         self.config(cursor="watch")
@@ -590,9 +596,10 @@ class LogView(tk.Frame):
 
 
 class Firmware(tk.Frame):
-    """Firmware GUI for moxa configurator"""
+    """Firmware GUI for moxa configurator."""
 
     def __init__(self, parent, controller) -> None:
+        """Initialize the class."""
         tk.Frame.__init__(self, parent)
         self.rowconfigure(1, weight=1)
         self.columnconfigure(0, weight=1)
@@ -612,11 +619,11 @@ class Firmware(tk.Frame):
         self.value_label = ttk.Label(self.frame2, text=self.update_progress_label())
 
     def update_progress_label(self) -> str:
-        """Update the values in the progress label"""
+        """Update the values in the progress label."""
         return f'Current Progress: {self.progressbar["value"]}%'
 
     def refresh(self) -> None:
-        """Refresh the values in the frame"""
+        """Refresh the values in the frame."""
         self.open_button.pack(side="left")
         self.return_button.pack(side="left")
         self.progressbar.pack(fill="x", padx=10, pady=20)
@@ -627,7 +634,7 @@ class Firmware(tk.Frame):
 
     @threaded
     def get_file(self) -> None:
-        """Transfer Firmware with XMODEM"""
+        """Transfer Firmware with XMODEM."""
         filename = fd.askopenfilename(
             initialdir="./site/", filetypes=[("Rom files", ".rom")]
         )
@@ -636,9 +643,11 @@ class Firmware(tk.Frame):
             filesize = os.path.getsize(filename)
 
             def copy():
+                """Do the command for firmware copy."""
                 return moxa_switch.copy_firmware(filename)
 
             def transfer():
+                """Start the transfer thread."""
                 thread = Thread(target=copy)
                 thread.start()
                 return thread

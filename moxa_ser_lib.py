@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-""" Moxalib.
+"""
+Moxalib.
 
 This module uses a serial connection to communicate with moxa eds routers
 for common configuring.
@@ -16,7 +17,8 @@ from xmodem import XMODEM, NAK  # type: ignore
 
 
 def expect(buffer: list, wtf: list) -> int:
-    """find a string in read value
+    """
+    Find a string in read value.
 
     Args:
         buffer (list): the text to be searched
@@ -35,9 +37,7 @@ def expect(buffer: list, wtf: list) -> int:
 
 
 class Connection:
-    """
-    Function on a serial object for moxa EDS routers
-    """
+    """Function on a serial object for moxa EDS routers."""
 
     def __init__(
         self,
@@ -48,6 +48,7 @@ class Connection:
         xonxoff: bool = True,
         verbose: bool = False,
     ) -> None:
+        """Initialize the class."""
         self.device = device
         self.baud = baud
         self.timeout = timeout
@@ -58,7 +59,7 @@ class Connection:
         self.cprompt = prompt + b"(config)" + self.p_end
         self.iprompt = prompt + b"(config-if)" + self.p_end
         self.vprompt = prompt + b"(config-vlan)" + self.p_end
-        self.ser = Serial(
+        self.serial = Serial(
             port=self.device,
             baudrate=self.baud,
             timeout=self.timeout,
@@ -69,24 +70,23 @@ class Connection:
         self.error_count = 0
 
     def vprint(self, text) -> None:
-        """
-        Prints only when verbose is true
-        """
+        """Print only when verbose is true."""
         if self.verbose is True:
             print(f"Moxalib: {text}")
 
     def reset_conn(self) -> list:
-        """Reset Connection"""
-        input_buffer = self.ser.readlines()
+        """Reset Connection."""
+        input_buffer = self.serial.readlines()
         while not input_buffer:
-            self.ser.setDTR(0)
+            self.serial.setDTR(0)  # type: ignore
             sleep(0.5)
-            self.ser.setDTR(1)
-            input_buffer = self.ser.readlines()
+            self.serial.setDTR(1)  # type: ignore
+            input_buffer = self.serial.readlines()
         return input_buffer
 
     def check_login(self):
-        """Checks if login mode is menu or cli
+        """
+        Check if login mode is menu or cli.
 
         Returns:
                 (0 is menu, 1 is cli, -1 when nothing matched)
@@ -97,7 +97,8 @@ class Connection:
         return returnval
 
     def menu_login(self, user: str = "admin", password: str = "") -> None:
-        """Login with menu, and change to cli login
+        """
+        Login with menu, and change to cli login.
 
         Args:
             user (str): username, default 'admin'
@@ -105,41 +106,42 @@ class Connection:
         """
         self.vprint("Entering Ansi terminal...")
         # Press enter to use ansi terminal
-        self.ser.write(b"\r")
-        account_mode = expect(self.ser.readlines(), [rb"[admin]"])
+        self.serial.write(b"\r")
+        account_mode = expect(self.serial.readlines(), [rb"[admin]"])
         if account_mode == 0:
             self.vprint("Selecting Account name: {}".format(user))
             # Select username
-            self.ser.write(b"\x1b[B")
+            self.serial.write(b"\x1b[B")
         else:
             self.vprint(f"menu_login function: Writing Account name: {user}")
             sleep(2)
             # Enter Username
-            self.ser.write(user.encode("latin-1") + "\n".encode("latin-1"))
+            self.serial.write(user.encode("latin-1") + "\n".encode("latin-1"))
         self.vprint(f"menu_login function: Writing Password: {password}")
         # Enter password
-        self.ser.write(password.encode("latin-1") + "\n".encode("latin-1"))
+        self.serial.write(password.encode("latin-1") + "\n".encode("latin-1"))
         sleep(0.2)
-        weak_password_prompt = expect(self.ser.readlines(), [rb"Enter to select"])
+        weak_password_prompt = expect(self.serial.readlines(), [rb"Enter to select"])
         if weak_password_prompt == -1:
             # Clear weak password popup (on newer firmware)
-            self.ser.write(b"\n")
+            self.serial.write(b"\n")
             sleep(0.2)
         self.vprint('menu_login function: Entering "Basic" menu...')
         # Enter menu - Basic
-        self.ser.write(b"1\n")
+        self.serial.write(b"1\n")
         sleep(0.2)
         self.vprint('menu_login function: Entering "Login mode" menu...')
         # Enter menu login mode
-        self.ser.write(b"l\n")
+        self.serial.write(b"l\n")
         sleep(0.2)
         self.vprint('menu_login function: Entering "yes" to switch mode...')
         # Enter yes to switch to CLI
-        self.ser.write(b"Y\n")
+        self.serial.write(b"Y\n")
         self.vprint("menu_login function: Restarting Connection")
 
     def cli_login(self, user: str = "admin", password: str = "") -> None:
-        """Login with cli login
+        """
+        Login with cli login.
 
         Args:
             user (str): username, default 'admin'
@@ -147,32 +149,34 @@ class Connection:
         """
         self.vprint(f"cli_login function: Writing Account name: {user}")
         # Enter username
-        self.ser.write(user.encode("latin-1") + b"\n")
+        self.serial.write(user.encode("latin-1") + b"\n")
         self.vprint(f"cli_login function: Writing Password: {password}")
         # Enter password
-        self.ser.write(password.encode("latin-1") + b"\n")
+        self.serial.write(password.encode("latin-1") + b"\n")
         # Clear potential weak password popup (on newer firmware)
-        self.ser.write("\n".encode("latin-1"))
+        self.serial.write("\n".encode("latin-1"))
         # Change terminal length to unlimited to dismiss pager
-        self.ser.write(b"terminal length 0\n")
+        self.serial.write(b"terminal length 0\n")
         # Clear buffer
-        self.ser.readlines()[-1].decode("latin-1")
+        self.serial.readlines()[-1].decode("latin-1")
 
     def keepalive(self) -> bool:
-        """Keeps user logged in
+        """
+        Keep the user logged in.
 
         Returns:
             bool: True: OK
                   False: Error
         """
-        self.ser.write(b"\n")
-        if self.ser.readlines()[-1].rstrip() != self.prompt:
+        self.serial.write(b"\n")
+        if self.serial.readlines()[-1].rstrip() != self.prompt:
             return False
         self.vprint("keepalive function")
         return True
 
     def get_sysinfo(self) -> list:
-        """Gets system info and returns it as a list
+        """
+        Get system info and returns it as a list.
 
         Returns:
             list: System parameters
@@ -180,55 +184,60 @@ class Connection:
                   2: Switch Description, 3: Maintainer Info,
                   4: MAC Address, 5: Switch Uptime
         """
-        self.ser.write(b"show system\n")
-        sysinfo = self.ser.read_until(self.prompt).decode("latin-1")
+        self.serial.write(b"show system\n")
+        sysinfo = self.serial.read_until(self.prompt).decode("latin-1")
         return_list = re.findall("(?<=: )(.*)\\r", sysinfo.strip())
         self.vprint(f"get_sysinfo function: {return_list}")
         return return_list
 
     def get_version(self) -> list:
-        """Gets version info and returns it as a list
+        """
+        Get version info and returns it as a list.
 
         Returns:
             list: Version info
                   0: Device Model, 1: Firmware Version
         """
-        self.ser.flush()
-        self.ser.write(b"show version\n")
-        version = self.ser.read_until(self.prompt).decode("latin-1")
+        self.serial.flush()
+        self.serial.write(b"show version\n")
+        version = self.serial.read_until(self.prompt).decode("latin-1")
         return_list = re.findall("(?<=: )(.*)\\r", version.strip())
         self.vprint(f"get_version function: {return_list}")
         return return_list
 
     def get_ifaces(self) -> list:
-        """Gets status of interfaces, and returns it as a list.
+        """
+        Get status of interfaces, and returns it as a list.
 
         Returns:
             list: Status of all interfaces
         """
-        self.ser.flush()
-        self.ser.write(b"show interfaces ethernet\n")
+        self.serial.flush()
+        self.serial.write(b"show interfaces ethernet\n")
         return_list = re.findall(
-            "(?<=(?:1/.{3}))\\w+", self.ser.read_until(self.prompt).decode("latin-1")
+            "(?<=(?:1/.{3}))\\w+", self.serial.read_until(self.prompt).decode("latin-1")
         )
         self.vprint(f"get_ifaces function: {return_list}")
         return return_list
 
     def get_portconfig(self) -> list:
-        """Gets the relay warning settings of the interfaces and returns it as a list.
+        """
+        Get the relay warning settings of the interfaces and returns it as a list.
 
         Returns:
             list: Relay warning status of all interfaces
         """
-        self.ser.write(b"show relay-warning config\n")
+        self.serial.write(b"show relay-warning config\n")
         return_list = re.findall(
-            "(?<=(?:1/.).{10})\\w+", self.ser.read_until(self.prompt).decode("latin-1")
+            "(?<=(?:1/.).{10})\\w+",
+            self.serial.read_until(self.prompt).decode("latin-1"),
         )
         self.vprint(f"get_portconfig function: {return_list}")
         return return_list
 
     def get_ip(self) -> list:
-        """Gets the current ip of the mgmt interface and returns it as a list.
+        """
+        Get the current ip of the mgmt interface and returns it as a list.
 
         Returns:
             list: mgmt ip info
@@ -239,47 +248,49 @@ class Connection:
                   7: IPv6 unicast address,
                   8: IPv6 link local address
         """
-        self.ser.write(b"show interfaces mgmt\n")
-        ipinfo = self.ser.read_until(self.prompt).decode("latin-1")
+        self.serial.write(b"show interfaces mgmt\n")
+        ipinfo = self.serial.read_until(self.prompt).decode("latin-1")
         return_list = re.findall("(?<=: )(.*)\\r", ipinfo.strip())
         self.vprint(f"get_ip function: {return_list}")
         return return_list
 
     def login_change(self) -> None:
-        """Change login mode to menu"""
+        """Change login mode to menu."""
         self.vprint("login_change function: Changing login mode to menu")
-        self.ser.write(b"login mode menu\n")
+        self.serial.write(b"login mode menu\n")
 
     def conf_iface(self, alarm: list) -> None:
-        """Configures alarm for interfaces in list. value == 1 is alarm on
+        """
+        Configure alarm for interfaces in list. value == 1 is alarm on.
 
         Args:
             alarm (list): interfaces with alarm on or off
         """
-        self.ser.write(b"configure\n")
-        self.ser.read_until(self.cprompt)
+        self.serial.write(b"configure\n")
+        self.serial.read_until(self.cprompt)
         for count, iface in enumerate(alarm):
-            self.ser.write(
+            self.serial.write(
                 b"interface ethernet 1/" + str(count + 1).encode("latin-1") + b"\n"
             )
-            self.ser.read_until(self.iprompt)
+            self.serial.read_until(self.iprompt)
             if iface == 1:
                 self.vprint(f"conf_iface function: set alarm on iface{count + 1} ON")
-                self.ser.write(b"relay-warning event link-off\n")
-                self.ser.read_until(self.iprompt)
-                self.ser.write(b"exit\n")
-                self.ser.read_until(self.cprompt)
+                self.serial.write(b"relay-warning event link-off\n")
+                self.serial.read_until(self.iprompt)
+                self.serial.write(b"exit\n")
+                self.serial.read_until(self.cprompt)
             else:
                 self.vprint(f"conf_iface function: set alarm on iface{count + 1} OFF")
-                self.ser.write(b"no relay-warning event link\n")
-                self.ser.read_until(self.iprompt)
-                self.ser.write(b"exit\n")
-                self.ser.read_until(self.cprompt)
-        self.ser.write(b"exit\n")
-        self.ser.read_until(self.prompt)
+                self.serial.write(b"no relay-warning event link\n")
+                self.serial.read_until(self.iprompt)
+                self.serial.write(b"exit\n")
+                self.serial.read_until(self.cprompt)
+        self.serial.write(b"exit\n")
+        self.serial.read_until(self.prompt)
 
     def conf_ip(self, ip_add: str) -> int:
-        """Changes the ip-address of the switch to (ip)
+        """
+        Change the ip-address of the switch to (ip).
 
         Args:
             ip_add (str): IP Address to set
@@ -292,16 +303,16 @@ class Connection:
             ip_address(ip_add)
         except ValueError:
             return 1
-        self.ser.write(b"configure\n")
-        self.ser.read_until(self.cprompt)
-        self.ser.write(b"interface mgmt\n")
-        self.ser.read_until(self.vprompt)
-        self.ser.write(
+        self.serial.write(b"configure\n")
+        self.serial.read_until(self.cprompt)
+        self.serial.write(b"interface mgmt\n")
+        self.serial.read_until(self.vprompt)
+        self.serial.write(
             b"ip address static " + ip_add.encode("latin-1") + b" 255.255.255.0\n"
         )
-        self.ser.write(b"exit\n")
-        self.ser.write(b"exit\n")
-        self.ser.read_until(self.prompt)
+        self.serial.write(b"exit\n")
+        self.serial.write(b"exit\n")
+        self.serial.read_until(self.prompt)
         if self.get_ip()[2] != ip_add.encode("latin-1"):
             self.vprint(f"conf_ip function: set: {ip_add}")
             return 0
@@ -309,49 +320,51 @@ class Connection:
         return -1
 
     def conf_hostname(self, hostname: str) -> None:
-        """Changes the hostname of the switch
+        """
+        Change the hostname of the switch.
 
         Args:
             hostname (str): Hostname to switch to
         """
-        self.ser.write(b"configure\n")
-        self.ser.read_until(self.cprompt)
-        self.ser.write(b"hostname " + hostname.encode("latin-1") + b"\n")
-        self.ser.read_until(self.cprompt)
-        self.ser.write(b"exit\n")
-        self.ser.read_until(self.prompt)
+        self.serial.write(b"configure\n")
+        self.serial.read_until(self.cprompt)
+        self.serial.write(b"hostname " + hostname.encode("latin-1") + b"\n")
+        self.serial.read_until(self.cprompt)
+        self.serial.write(b"exit\n")
+        self.serial.read_until(self.prompt)
         self.vprint(f"conf_hostname function: set {hostname}")
 
     def conf_location(self, location: str) -> None:
-        """Changes the location parameter of the switch
+        """Change the location parameter of the switch.
 
         Args:
             location (str): location string to switch to
         """
-        self.ser.write(b"configure\n")
-        self.ser.read_until(self.cprompt)
-        self.ser.write(b"snmp-server location " + location.encode("latin-1") + b"\n")
-        self.ser.read_until(self.cprompt)
-        self.ser.write(b"exit\n")
-        self.ser.read_until(self.prompt)
+        self.serial.write(b"configure\n")
+        self.serial.read_until(self.cprompt)
+        self.serial.write(b"snmp-server location " + location.encode("latin-1") + b"\n")
+        self.serial.read_until(self.cprompt)
+        self.serial.write(b"exit\n")
+        self.serial.read_until(self.prompt)
         self.vprint(f"conf_location function: set to: {location}")
 
     def factory_conf(self) -> None:
-        """Reset device to factory defaults"""
-        self.ser.write(b"reload factory-default\n")
-        self.ser.read_until(b"Proceed with reload to factory default? [Y/n]")
-        self.ser.write(b"Y")
+        """Reset device to factory defaults."""
+        self.serial.write(b"reload factory-default\n")
+        self.serial.read_until(b"Proceed with reload to factory default? [Y/n]")
+        self.serial.write(b"Y")
         self.vprint("factory_conf function: Factory defaults set")
 
     def save_run2startup(self) -> bool:
-        """Saves the configuration from running to startup
+        """
+        Save the configuration from running to startup.
 
         Returns:
             status (int): True = Success
                           False = Failure
         """
-        self.ser.write(b"save\n")
-        rval = self.ser.read_until(self.prompt)
+        self.serial.write(b"save\n")
+        rval = self.serial.read_until(self.prompt)
         if rb"Success" in rval:
             self.vprint("Saving running config to startup: Success")
             return True
@@ -359,13 +372,13 @@ class Connection:
         return False
 
     def save_config(self) -> str:
-        """Gets the startup config and returns it as a decoded string
+        """Get the startup config and returns it as a decoded string.
 
         Returns:
             config (str)
         """
-        self.ser.write(b"show startup-config\n")
-        config = self.ser.readlines()[3:-1]
+        self.serial.write(b"show startup-config\n")
+        config = self.serial.readlines()[3:-1]
         config_dec = []
         for items in config:
             config_dec.append(items.decode("latin-1"))
@@ -373,30 +386,31 @@ class Connection:
         return configstring  # [3:-1]
 
     def compare_config(self) -> int:
-        """Compares the running and startup config and returns status
+        """Compare the running and startup config and returns status.
 
         Returns:
             status (int): -1 = Match
                            0 = Mismatch
         """
-        self.ser.write(b"show startup-config\n")
-        startup = self.ser.readlines()[3:-1]
-        self.ser.write(b"show running-config\n")
-        running = self.ser.readlines()[3:-1]
+        self.serial.write(b"show startup-config\n")
+        startup = self.serial.readlines()[3:-1]
+        self.serial.write(b"show running-config\n")
+        running = self.serial.readlines()[3:-1]
         self.vprint(f"compare_config function: {running}")
         if startup == running:
             return -1
         return 0
 
     def get_eventlog(self) -> str:
-        """Returns the eventlog as a list
+        """
+        Return the eventlog as a list.
 
         Returns:
             eventlog (list)
         """
         self.vprint("get_eventlog function: ")
-        self.ser.write(b"show logging event-log\n")
-        eventlog = self.ser.readlines()[1:-1]
+        self.serial.write(b"show logging event-log\n")
+        eventlog = self.serial.readlines()[1:-1]
         eventlog_dec = []
         for items in eventlog:
             eventlog_dec.append(items.decode("latin-1"))
@@ -405,12 +419,13 @@ class Connection:
         return eventstring
 
     def clear_eventlog(self) -> None:
-        """Clears the eventlog"""
-        self.ser.write(b"clear logging event-log\n")
-        self.ser.read_until(self.prompt)
+        """Clear the eventlog."""
+        self.serial.write(b"clear logging event-log\n")
+        self.serial.read_until(self.prompt)
 
     def copy_firmware(self, file: str) -> bool:
-        """Send firmware file to device
+        """
+        Send firmware file to device.
 
         Args:
             file str: filelocation with full path
@@ -419,13 +434,18 @@ class Connection:
                            False for failure
         """
 
-        def getc(size, timeout=1):
-            return self.ser.read(size) or None
+        def getc(size, timeout=1) -> bytes | None:
+            """Retrieve the bytes from the stream."""
+            _ = timeout
+            return self.serial.read(size) or None
 
-        def putc(data, timeout=1):
-            return self.ser.write(data)
+        def putc(data, timeout=1) -> int | None:
+            """Receive the bytes from the stream."""
+            _ = timeout
+            return self.serial.write(data)
 
         def progress(total_packets, success_count, error_count):
+            """Get the transmit data."""
             self.total_packets = total_packets
             self.success_count = success_count
             self.error_count = error_count
@@ -435,9 +455,9 @@ class Connection:
                 f" Error Count: {self.error_count}"
             )
 
-        self.ser.write(b"copy xmodem device-firmware\n")
-        self.ser.write(NAK)  # send ^U (NAK)
-        self.ser.readlines()  # empty buffer, ready to send
+        self.serial.write(b"copy xmodem device-firmware\n")
+        self.serial.write(NAK)  # send ^U (NAK)
+        self.serial.readlines()  # empty buffer, ready to send
         modem = XMODEM(getc, putc)
         with open(file, "rb") as stream:
             return modem.send(stream, retry=8, callback=progress)

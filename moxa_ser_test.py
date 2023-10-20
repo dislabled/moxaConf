@@ -1,15 +1,12 @@
 #!/usr/bin/python3
-"""
-
-Library to test GUI without connection to switch
-
-"""
+"""Library to test GUI without connection to switch."""
 from ipaddress import ip_address
 from time import sleep
 
 
-def expect(buffer:list, wtf:list) -> int:
-    """ find a string in read value
+def expect(buffer: list, wtf: list) -> int:
+    """
+    Find a string in read value.
 
     Args:
         buffer (list): the text to be searched
@@ -17,7 +14,7 @@ def expect(buffer:list, wtf:list) -> int:
 
     Returns:
         int: stringindex for match,
-             -1 if nothing found, 
+             -1 if nothing found,
              -2 if empty buffer
     """
     findval = buffer[-1]
@@ -26,85 +23,90 @@ def expect(buffer:list, wtf:list) -> int:
             return index
     return -1
 
-class Connection:
-    """
-    Function on a serial object for moxa EDS routers
-    """
 
-    def __init__(self, device:str='/dev/ttyUSB0', baud:int=115200, timeout:int=1,
-            prompt:bytes=b'EDS-408A-MM-SC', xonxoff:int=1, verbose:bool=False) -> None:
+class Connection:
+    """Function on a serial object for moxa EDS routers."""
+
+    def __init__(
+        self,
+        device: str = "/dev/ttyUSB0",
+        baud: int = 115200,
+        timeout: int = 1,
+        prompt: bytes = b"EDS-408A-MM-SC",
+        xonxoff: int = 1,
+        verbose: bool = False,
+    ) -> None:
+        """Initialize the class."""
         self.device = device
         self.baud = baud
         self.timeout = timeout
         self.xonxoff = xonxoff
         self.verbose = verbose
-        self.p_end = b'#'
+        self.p_end = b"#"
         self.prompt = prompt + self.p_end
-        self.cprompt = prompt + b'(config)' + self.p_end
-        self.iprompt = prompt + b'(config-if)' + self.p_end
-        self.vprompt = prompt + b'(config-vlan)' + self.p_end
+        self.cprompt = prompt + b"(config)" + self.p_end
+        self.iprompt = prompt + b"(config-if)" + self.p_end
+        self.vprompt = prompt + b"(config-vlan)" + self.p_end
         self.total_packets = 0
         self.success_count = 0
         self.error_count = 0
-        
 
     def vprint(self, text) -> None:
-        """
-        Prints only when verbose is true
-        """
+        """Print only when verbose is true."""
         if self.verbose is True:
-            print(f'Moxalib: {text}')
+            print(f"Moxalib: {text}")
 
     def reset_conn(self) -> None:
-        """ Reset Connection
-        """
+        """Reset Connection."""
         pass
 
     def check_login(self):
-            """ Checks if login mode is menu or cli
+        """
+        Check if login mode is menu or cli.
 
-            Returns:
-                    (0 is menu, 1 is cli, -1 when nothing matched)
-            """
-            return_val = 1
-            self.vprint(f'check_login function: {return_val}')
-            return return_val
+        Returns:
+                (0 is menu, 1 is cli, -1 when nothing matched)
+        """
+        return_val = 1
+        self.vprint(f"check_login function: {return_val}")
+        return return_val
 
-    def menu_login(self, user:str='admin', password:str='') -> None:
-        """ Login with menu, and change to cli login
+    def menu_login(self, user: str = "admin", password: str = "") -> None:
+        """
+        Login with menu, and change to cli login.
 
-        Args: 
+        Args:
             user (str): username, default 'admin'
             password (str): password, default ''
         """
-        self.vprint('Writing Account name: {}'.format(user))
-        self.vprint('Writing Password: {}'.format(password))
+        self.vprint("Writing Account name: {}".format(user))
+        self.vprint("Writing Password: {}".format(password))
 
+    def cli_login(self, user: str = "admin", password: str = "") -> None:
+        """
+        Login with cli login.
 
-    def cli_login(self, user:str='admin', password:str='') -> None:
-        """ Login with cli login
-
-        Args: 
+        Args:
             user (str): username, default 'admin'
             password (str): password, default ''
         """
-        self.vprint('Writing Account name: {}'.format(user))
-        self.vprint('Writing Password: {}'.format(password))
-
+        self.vprint("Writing Account name: {}".format(user))
+        self.vprint("Writing Password: {}".format(password))
 
     def keepalive(self) -> int:
-        """ Keeps user logged in
-        
+        """
+        Keep user logged in.
+
         Returns:
             int: -1: OK
                   0: Error
         """
-        self.vprint('keepalive function: -1')
+        self.vprint("keepalive function: -1")
         return -1
 
-
     def get_sysinfo(self) -> list:
-        """ Gets system info and returns it as a list
+        """
+        Get system info and returns it as a list.
 
         Returns:
             list: System parameters
@@ -112,45 +114,63 @@ class Connection:
                   2: Switch Description, 3: Maintainer Info,
                   4: MAC Address, 5: Switch Uptime
         """
-        return_list = ['Managed Redundant Switch 06113', 'Switch Location',
-                       'EDS-408A-MM-SC', '', '00:90:E8:73:46:55', '0d0h40m48s']
-        self.vprint(f'get_sysinfo function: {return_list}')
+        return_list = [
+            "Managed Redundant Switch 06113",
+            "Switch Location",
+            "EDS-408A-MM-SC",
+            "",
+            "00:90:E8:73:46:55",
+            "0d0h40m48s",
+        ]
+        self.vprint(f"get_sysinfo function: {return_list}")
         return return_list
 
     def get_version(self) -> list:
-        """ Gets version info and returns it as a list
+        """
+        Get version info and returns it as a list.
 
         Returns:
             list: Version info
                   0: Device Model, 1: Firmware Version
         """
-        return_list = ['EDS-408A-MM-SC', 'V3.8']
-        self.vprint(f'get_version function: {return_list}')
+        return_list = ["EDS-408A-MM-SC", "V3.8"]
+        self.vprint(f"get_version function: {return_list}")
         return return_list
 
     def get_ifaces(self) -> list:
-        """ Gets status of interfaces, and returns it as a list.
-        
+        """
+        Get status of interfaces, and returns it as a list.
+
         Returns:
             list: Status of all interfaces
         """
-        return_list = ['Down', 'Down', 'Down', 'Down', 'Down', 'Down', 'Down', 'Down']
-        self.vprint(f'get_ifaces function: {return_list}')
+        return_list = ["Down", "Down", "Down", "Down", "Down", "Down", "Down", "Down"]
+        self.vprint(f"get_ifaces function: {return_list}")
         return return_list
 
     def get_portconfig(self) -> list:
-        """ Gets the relay warning settings of the interfaces and returns it as a list.
+        """
+        Get the relay warning settings of the interfaces and returns it as a list.
 
         Returns:
             list: Relay warning status of all interfaces
         """
-        return_list = ['Off', 'Ignore', 'Ignore', 'Off',
-                       'Ignore', 'Off', 'Off', 'Ignore']
-        self.vprint(f'get_portconfig function: {return_list}')
+        return_list = [
+            "Off",
+            "Ignore",
+            "Ignore",
+            "Off",
+            "Ignore",
+            "Off",
+            "Off",
+            "Ignore",
+        ]
+        self.vprint(f"get_portconfig function: {return_list}")
         return return_list
 
     def get_ip(self) -> list:
-        """ Gets the current ip of the mgmt interface and returns it as a list.
+        """
+        Get the current ip of the mgmt interface and returns it as a list.
 
         Returns:
             list: mgmt ip info
@@ -161,27 +181,36 @@ class Connection:
                   7: IPv6 unicast address,
                   8: IPv6 link local address
         """
-        return_list = ['1', 'Static', '192.168.127.253', '255.255.255.0',
-                       '0.0.0.0', '', '', '::', 'fe80::290:e8ff:fe73:4655']
-        self.vprint(f'get_ip function: {return_list}')
+        return_list = [
+            "1",
+            "Static",
+            "192.168.127.253",
+            "255.255.255.0",
+            "0.0.0.0",
+            "",
+            "",
+            "::",
+            "fe80::290:e8ff:fe73:4655",
+        ]
+        self.vprint(f"get_ip function: {return_list}")
         return return_list
 
     def login_change(self) -> None:
-        """ Change login mode to menu
-        """
-        self.vprint('login_change function: login mode to menu')
+        """Change login mode to menu."""
+        self.vprint("login_change function: login mode to menu")
 
-    def conf_iface(self, alarm:list) -> None:
-        """ Configures alarm for interfaces in list. value == 1 is alarm on
+    def conf_iface(self, alarm: list) -> None:
+        """
+        Configure alarm for interfaces in list. value == 1 is alarm on.
 
         Args:
             alarm (list): interfaces with alarm on or off
         """
         self.vprint(alarm)
 
-
-    def conf_ip(self, ip:str) -> int:
-        """ Changes the ip-address of the switch to (ip)
+    def conf_ip(self, ip: str) -> int:
+        """
+        Change the ip-address of the switch to (ip).
 
         Args:
             ip (str): IP Address to set
@@ -195,86 +224,91 @@ class Connection:
         except ValueError:
             return 1
         if self.get_ip()[2] != ip:
-            self.vprint(f'IP address set to: {ip}')
+            self.vprint(f"IP address set to: {ip}")
             return 0
-        self.vprint('IP address setting: Failure')
+        self.vprint("IP address setting: Failure")
         return -1
 
-    def conf_hostname(self, hostname:str) -> None:
-        """ Changes the hostname of the switch
+    def conf_hostname(self, hostname: str) -> None:
+        """
+        Change the hostname of the switch.
 
         Args:
             hostname (str): Hostname to switch to
         """
-        self.vprint(f'Hostname set to: {hostname}')
+        self.vprint(f"Hostname set to: {hostname}")
 
-    def conf_location(self, location:str) -> None:
-        """ Changes the location parameter of the switch
+    def conf_location(self, location: str) -> None:
+        """
+        Change the location parameter of the switch.
 
         Args:
             location (str): location string to switch to
         """
-        self.vprint(f'Location set to: {location}')
+        self.vprint(f"Location set to: {location}")
 
     def factory_conf(self) -> None:
-        """ Reset device to factory defaults
-        """
-        self.vprint('Factory defaults set')
+        """Reset device to factory defaults."""
+        self.vprint("Factory defaults set")
         pass
 
     def save_run2startup(self) -> bool:
-        """ Saves the configuration from running to startup
-        
+        """
+        Save the configuration from running to startup.
+
         Returns:
             status (int): True = Success
                           False = Failure
         """
-        rval = b'Success'
-        if br'Success' in rval:
-            self.vprint('Saving running config to startup: Success')
+        rval = b"Success"
+        if rb"Success" in rval:
+            self.vprint("Saving running config to startup: Success")
             return True
         else:
-            self.vprint('Saving running config to startup: Failure')
+            self.vprint("Saving running config to startup: Failure")
             return False
 
     def save_config(self) -> str:
-        """ Gets the startup config and returns it as a decoded string
+        """
+        Get the startup config and return it as a decoded string.
 
         Returns:
             config (str)
         """
-        configstring = 'test test test'
-        return configstring #[3:-1]
+        configstring = "test test test"
+        return configstring  # [3:-1]
 
     def compare_config(self) -> int:
-        """ Compares the running and startup config and returns status
+        """
+        Compare the running and startup config and return status.
 
         Returns:
             status (int): -1 = Match
                            0 = Mismatch
         """
-        self.vprint('compare_config function')
+        self.vprint("compare_config function")
         return 0
 
     def get_eventlog(self) -> str:
-        """ Returns the eventlog as a list
+        """
+        Return the eventlog as a list.
 
         Returns:
             eventlog (list)
         """
-        self.vprint('get_eventlog function: ')
-        eventstring = ' test eventlog test'
+        self.vprint("get_eventlog function: ")
+        eventstring = " test eventlog test"
         self.vprint(eventstring)
         return eventstring
 
     def clear_eventlog(self) -> None:
-        """ Clears the eventlog
-        """
-        self.vprint('clear_eventlog function:')
+        """Clear the eventlog."""
+        self.vprint("clear_eventlog function:")
 
-    def copy_firmware(self, file:str) -> bool:
-        """ Send firmware file to device
-        
+    def copy_firmware(self, file: str) -> bool:
+        """
+        Send firmware file to device.
+
         Args:
             file str: filelocation with full path
         Returns:
@@ -282,17 +316,11 @@ class Connection:
                            False for failure
         """
         _ = file
-        def progress(tp, sc, ec):
-            self.total_packets = tp
-            self.success_count = sc
-            self.error_count = ec
-            self.vprint((f'Total Packets: {self.total_packets}',
-                         f'Success Count: {self.success_count}',
-                         f'Error Count: {self.error_count}'))
 
-        self.vprint('copy_firmware function:')
+        self.vprint("copy_firmware function:")
         sleep(20)
         return True
+
 
 if __name__ == "__main__":
     pass
