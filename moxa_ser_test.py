@@ -144,7 +144,7 @@ class Connection:
         Returns:
             list: Status of all interfaces
         """
-        return_list = ["Down", "Down", "Down", "Down", "Down", "Down", "Down", "Down"]
+        return_list = ["Up", "Down", "Down", "Up", "Down", "Down", "Down", "Down"]
         self.vprint(f"get_ifaces function: {return_list}")
         return return_list
 
